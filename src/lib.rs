@@ -26,26 +26,6 @@ pub struct Args {
     pub invert_match: bool,
 }
 
-impl Args {
-    /// Prints the result of the search
-    ///
-    /// # Arguments
-    ///
-    /// * `results` - A vector of strings containing the lines that match the query
-    pub fn print_result(&self, results: Vec<String>) {
-        if results.is_empty() {
-            println!(
-                "Query {} not found in file {}",
-                self.pattern,
-                self.file_path.display()
-            );
-        } else {
-            println!("Found {} lines\nResult of search:", results.len());
-            results.iter().for_each(|line| println!("{line}"))
-        }
-    }
-}
-
 /// Reads lines from a file and returns a parallel iterator over the lines
 ///
 /// # Arguments
@@ -98,13 +78,10 @@ where
 /// # Returns
 ///
 /// * `Result<(), Box<dyn Error>>` - A result indicating success or an error
-pub fn run(args: Args) -> Result<(), Box<dyn Error>> {
+pub fn run(args: &Args) -> Result<Vec<String>, Box<dyn Error>> {
     let reader_result = read_lines(&args.file_path)?;
-    let search_result = search_query(reader_result, &args.pattern, args.ignore_case)?;
 
-    args.print_result(search_result);
-
-    Ok(())
+    search_query(reader_result, &args.pattern, args.ignore_case)
 }
 
 #[cfg(test)]
