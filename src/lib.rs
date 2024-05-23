@@ -6,19 +6,28 @@ use std::io;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 
+/// Command line arguments for grep_rusty
 #[derive(Parser, Debug)]
 pub struct Args {
+    /// The query string to search for
     #[arg(short, long)]
     pub query: String,
 
+    /// The path to the file to search in
     #[arg(short, long)]
     pub file_path: PathBuf,
 
+    /// Ignore case distinctions in the query
     #[arg(short, long, default_value_t = true)]
     pub ignore_case: bool,
 }
 
 impl Args {
+    /// Prints the result of the search
+    ///
+    /// # Arguments
+    ///
+    /// * `results` - A vector of strings containing the lines that match the query
     pub fn print_result(&self, results: Vec<String>) {
         if results.is_empty() {
             println!(
@@ -33,6 +42,15 @@ impl Args {
     }
 }
 
+/// Reads lines from a file and returns a parallel iterator over the lines
+///
+/// # Arguments
+///
+/// * `file_path` - The path to the file to read from
+///
+/// # Returns
+///
+/// * `io::Result<impl ParallelIterator<Item = String>>` - A result containing a parallel iterator over the lines in the file
 pub fn read_lines(file_path: &PathBuf) -> io::Result<impl ParallelIterator<Item = String>> {
     let file = File::open(file_path)?;
     let reader = BufReader::new(file);
@@ -40,6 +58,16 @@ pub fn read_lines(file_path: &PathBuf) -> io::Result<impl ParallelIterator<Item 
     Ok(reader.lines().map_while(Result::ok).par_bridge())
 }
 
+/// Searches for a query in a collection of lines
+///
+/// # Arguments
+///
+/// * `lines` - A collection of lines to search through
+/// * `query` - The query string to search for
+///
+/// # Returns
+///
+/// * `Result<Vec<String>, Box<dyn Error>>` - A result containing a vector of matching lines or an error
 fn search_query<T>(lines: T, query: &str) -> Result<Vec<String>, Box<dyn Error>>
 where
     T: IntoParallelIterator<Item = String>,
@@ -50,6 +78,15 @@ where
         .collect())
 }
 
+/// Runs the grep_rusty utility
+///
+/// # Arguments
+///
+/// * `args` - The command line arguments
+///
+/// # Returns
+///
+/// * `Result<(), Box<dyn Error>>` - A result indicating success or an error
 pub fn run(args: Args) -> Result<(), Box<dyn Error>> {
     let reader_result = read_lines(&args.file_path)?;
     let search_result = search_query(reader_result, &args.query)?;
