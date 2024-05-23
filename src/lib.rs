@@ -1,25 +1,29 @@
 use clap::Parser;
 use rayon::prelude::*;
+
 use std::error::Error;
 use std::fs::File;
-use std::io;
-use std::io::{BufRead, BufReader};
+use std::io::{self, BufRead, BufReader};
 use std::path::PathBuf;
 
-/// Command line arguments for grep_rusty
 #[derive(Parser, Debug)]
+#[command(name = "grep-rusty")]
+#[command(version = "0.1.0")]
+#[command(about = "Command line arguments for grep_rusty", long_about = None)]
 pub struct Args {
     /// The query string to search for
-    #[arg(short, long)]
-    pub query: String,
+    pub pattern: String,
 
     /// The path to the file to search in
-    #[arg(short, long)]
     pub file_path: PathBuf,
 
     /// Ignore case while searching
     #[arg(short, long)]
     pub ignore_case: bool,
+
+    /// Selected lines are those not matching any of the specified patterns
+    #[arg(short = 'v', long = "invert-match")]
+    pub invert_match: bool,
 }
 
 impl Args {
@@ -32,7 +36,7 @@ impl Args {
         if results.is_empty() {
             println!(
                 "Query {} not found in file {}",
-                self.query,
+                self.pattern,
                 self.file_path.display()
             );
         } else {
@@ -96,7 +100,7 @@ where
 /// * `Result<(), Box<dyn Error>>` - A result indicating success or an error
 pub fn run(args: Args) -> Result<(), Box<dyn Error>> {
     let reader_result = read_lines(&args.file_path)?;
-    let search_result = search_query(reader_result, &args.query, args.ignore_case)?;
+    let search_result = search_query(reader_result, &args.pattern, args.ignore_case)?;
 
     args.print_result(search_result);
 
@@ -105,20 +109,30 @@ pub fn run(args: Args) -> Result<(), Box<dyn Error>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{read_lines, search_query};
+    use crate::{read_lines, search_query, Args};
     use std::path::PathBuf;
 
     #[test]
-    fn search_query_test() {
+    fn search_test() {
         let query = "Except";
         let file_path = PathBuf::from("example.txt");
-        let lines = read_lines(&file_path).unwrap();
-
-        let result = search_query(lines, query, true).unwrap();
 
         assert_eq!(
-            result,
+            search_query(read_lines(&file_path).unwrap(), query, true).unwrap(),
+            vec![
+                "Except the Will which says to them: ‘Hold on!’".to_string(),
+                "except the Will which says to them: ‘Hold on!’".to_string(),
+            ]
+        );
+        assert_eq!(
+            search_query(read_lines(&file_path).unwrap(), query, false).unwrap(),
             vec!["Except the Will which says to them: ‘Hold on!’".to_string()]
         )
+    }
+
+    #[test]
+    fn verify_cli() {
+        use clap::CommandFactory;
+        Args::command().debug_assert()
     }
 }
