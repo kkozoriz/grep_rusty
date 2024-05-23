@@ -18,10 +18,9 @@ To install grep_rusty, ensure you have Rust and Cargo installed, then run:
 
 ## Usage
 
-Use grep_rusty just like you would use the traditional grep:
-
+You can use it this way:
 ```
-grep_rusty -q 'query' -f 'filename'
+grep_rusty [OPTIONS] <PATTERN> <FILE_PATH>
 ```
 
 For more options and usage details, you can run:
