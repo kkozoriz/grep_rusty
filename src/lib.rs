@@ -17,8 +17,8 @@ pub struct Args {
     #[arg(short, long)]
     pub file_path: PathBuf,
 
-    /// Ignore case distinctions in the query
-    #[arg(short, long, default_value_t = true)]
+    /// Ignore case while searching
+    #[arg(short, long)]
     pub ignore_case: bool,
 }
 
@@ -64,17 +64,24 @@ pub fn read_lines(file_path: &PathBuf) -> io::Result<impl ParallelIterator<Item 
 ///
 /// * `lines` - A collection of lines to search through
 /// * `query` - The query string to search for
+/// * `ignore_case` - Whether to ignore case in the search
 ///
 /// # Returns
 ///
 /// * `Result<Vec<String>, Box<dyn Error>>` - A result containing a vector of matching lines or an error
-fn search_query<T>(lines: T, query: &str) -> Result<Vec<String>, Box<dyn Error>>
+fn search_query<T>(lines: T, query: &str, ignore_case: bool) -> Result<Vec<String>, Box<dyn Error>>
 where
     T: IntoParallelIterator<Item = String>,
 {
     Ok(lines
         .into_par_iter()
-        .filter(|line| line.contains(query))
+        .filter(|line| {
+            if ignore_case {
+                line.to_lowercase().contains(&query.to_lowercase())
+            } else {
+                line.contains(query)
+            }
+        })
         .collect())
 }
 
@@ -89,7 +96,7 @@ where
 /// * `Result<(), Box<dyn Error>>` - A result indicating success or an error
 pub fn run(args: Args) -> Result<(), Box<dyn Error>> {
     let reader_result = read_lines(&args.file_path)?;
-    let search_result = search_query(reader_result, &args.query)?;
+    let search_result = search_query(reader_result, &args.query, args.ignore_case)?;
 
     args.print_result(search_result);
 
@@ -107,7 +114,7 @@ mod tests {
         let file_path = PathBuf::from("example.txt");
         let lines = read_lines(&file_path).unwrap();
 
-        let result = search_query(lines, query).unwrap();
+        let result = search_query(lines, query, true).unwrap();
 
         assert_eq!(
             result,
