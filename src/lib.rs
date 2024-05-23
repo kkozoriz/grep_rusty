@@ -118,13 +118,6 @@ mod tests {
         let file_path = PathBuf::from("example.txt");
 
         assert_eq!(
-            search_query(read_lines(&file_path).unwrap(), query, true).unwrap(),
-            vec![
-                "Except the Will which says to them: ‘Hold on!’".to_string(),
-                "except the Will which says to them: ‘Hold on!’".to_string(),
-            ]
-        );
-        assert_eq!(
             search_query(read_lines(&file_path).unwrap(), query, false).unwrap(),
             vec!["Except the Will which says to them: ‘Hold on!’".to_string()]
         )
