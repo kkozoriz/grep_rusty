@@ -1,7 +1,7 @@
 [package]
 name = "grep_rusty"
-authors = []
-description = ""
+authors = ["Konstantin Kozoriz <kkozoriz7@yandex.ru>"]
+description = "grep_rusty is a reimplementation of the classic grep utility in Rust."
 version = "0.1.0"
 edition = "2021"
 
