@@ -1,6 +1,8 @@
 use clap::Parser;
+use colored::Colorize;
 use grep_rusty::Args;
 use std::process;
+
 fn main() {
     let args = Args::parse();
 
@@ -17,8 +19,8 @@ fn print_result(args: &Args, results: Vec<String>) {
     if results.is_empty() {
         println!(
             "Query {} not found in file {}",
-            args.pattern,
-            args.file_path.display()
+            args.pattern.red(),
+            args.file_path.display().to_string().purple()
         );
     } else {
         println!("Found {} lines\nResult of search:", results.len());
