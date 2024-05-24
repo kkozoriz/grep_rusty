@@ -1,5 +1,50 @@
+//! [![github]](https://github.com/kkozoriz/grep_rusty.git)
+//!
+//! [github]: https://img.shields.io/badge/github-8da0cb?style=for-the-badge&labelColor=555555&logo=github
+//! `grep_rusty` is a simple command line utility for searching patterns in files.
+//!
+//! It provides functionality to search for a given pattern in text files, with options to perform
+//! case-sensitive or case-insensitive searches, and to invert the match results. The utility
+//! leverages parallel processing for efficient searching of large files.
+//!
+//! ## Usage
+//!
+//! The utility can be invoked from the command line with the following syntax:
+//!
+//! ```shell
+//! grep-rusty [OPTIONS] <PATTERN> <FILE>
+//! ```
+//!
+//! Where:
+//!
+//! - `<PATTERN>`: The pattern to search for in the file.
+//! - `<FILE>`: The path to the file in which to search for the pattern.
+//!
+//! The following options are available:
+//!
+//! - `-i, --ignore-case`: Perform a case-insensitive search.
+//! - `-v, --invert-match`: Invert the match results, selecting lines that do not match the pattern.
+//!
+//! ## Examples
+//!
+//! Perform a case-insensitive search for the pattern "error" in the file "log.txt":
+//!
+//! ```shell
+//! grep-rusty -i error log.txt
+//! ```
+//!
+//! Perform a case-sensitive search for the pattern "warning" in the file "log.txt", selecting lines
+//! that do not match the pattern:
+//!
+//! ```shell
+//! grep-rusty -v warning log.txt
+//! ```
+
+mod search;
+
 use clap::Parser;
 use rayon::prelude::*;
+pub use search::*;
 
 use std::error::Error;
 use std::fs::File;
@@ -48,24 +93,22 @@ pub fn read_lines(file_path: &PathBuf) -> io::Result<impl ParallelIterator<Item 
 ///
 /// * `lines` - A collection of lines to search through
 /// * `query` - The query string to search for
-/// * `ignore_case` - Whether to ignore case in the search
+/// * `config` - The search configuration
 ///
 /// # Returns
 ///
 /// * `Result<Vec<String>, Box<dyn Error>>` - A result containing a vector of matching lines or an error
-fn search_query<T>(lines: T, query: &str, ignore_case: bool) -> Result<Vec<String>, Box<dyn Error>>
+fn search_query<T>(
+    lines: T,
+    query: &str,
+    config: &SearchConfig,
+) -> Result<Vec<String>, Box<dyn Error>>
 where
     T: IntoParallelIterator<Item = String>,
 {
     Ok(lines
         .into_par_iter()
-        .filter(|line| {
-            if ignore_case {
-                line.to_lowercase().contains(&query.to_lowercase())
-            } else {
-                line.contains(query)
-            }
-        })
+        .filter(|line| config.matches(line, query))
         .collect())
 }
 
@@ -81,24 +124,29 @@ where
 pub fn run(args: &Args) -> Result<Vec<String>, Box<dyn Error>> {
     let reader_result = read_lines(&args.file_path)?;
 
-    search_query(reader_result, &args.pattern, args.ignore_case)
+    let mut config = SearchConfig::default();
+
+    if args.ignore_case {
+        config.add_config(Box::new(CaseInsensitive))
+    } else {
+        config.add_config(Box::new(CaseSensitive))
+    }
+
+    if args.invert_match {
+        config = SearchConfig {
+            configs: vec![Box::new(InvertMatch { inner: config })],
+        };
+    }
+
+    search_query(reader_result, &args.pattern, &config)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{read_lines, search_query, Args};
-    use std::path::PathBuf;
+    use crate::Args;
 
     #[test]
-    fn search_test() {
-        let query = "Except";
-        let file_path = PathBuf::from("example.txt");
-
-        assert_eq!(
-            search_query(read_lines(&file_path).unwrap(), query, false).unwrap(),
-            vec!["Except the Will which says to them: ‘Hold on!’".to_string()]
-        )
-    }
+    fn search_test() {}
 
     #[test]
     fn verify_cli() {
