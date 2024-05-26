@@ -1,3 +1,5 @@
+use regex::Regex;
+
 /// Trait defining a search option.
 ///
 /// This trait provides a common interface for various search options, allowing
@@ -22,6 +24,11 @@ pub struct CaseInsensitive;
 /// Struct representing a case-sensitive search option.
 pub struct CaseSensitive;
 
+/// The expression is searched for as a word
+pub struct WordRegExp {
+    pub case_insensitive: bool
+}
+
 /// Struct representing an inverted search option.
 pub struct InvertMatch<T: SearchOption> {
     /// The inner search option to invert.
@@ -34,6 +41,17 @@ pub struct SearchConfig {
     pub configs: Vec<Box<dyn SearchOption>>,
 }
 
+impl SearchOption for WordRegExp {
+    fn matches(&self, line: &str, query: &str) -> bool {
+        let pattern = if self.case_insensitive {
+            format!(r"(?i)\b{}\b", regex::escape(query))
+        } else {
+            format!(r"\b{}\b", regex::escape(query))
+        };
+        let re = Regex::new(&pattern).unwrap();
+        re.is_match(line)
+    }
+}
 impl SearchOption for CaseSensitive {
     fn matches(&self, line: &str, query: &str) -> bool {
         line.contains(query)
