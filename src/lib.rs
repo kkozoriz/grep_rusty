@@ -66,6 +66,9 @@ pub struct Args {
     #[arg(short, long)]
     pub ignore_case: bool,
 
+    #[arg(short = 'w', long = "word-regexp")]
+    pub word_regexp: bool,
+
     /// Selected lines are those not matching any of the specified patterns
     #[arg(short = 'v', long = "invert-match")]
     pub invert_match: bool,
@@ -130,6 +133,10 @@ pub fn run(args: &Args) -> Result<Vec<String>, Box<dyn Error>> {
         config.add_config(Box::new(CaseInsensitive))
     } else {
         config.add_config(Box::new(CaseSensitive))
+    }
+
+    if args.word_regexp {
+        config.add_config(Box::new(WordRegExp {case_insensitive: args.ignore_case}))
     }
 
     if args.invert_match {
