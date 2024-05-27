@@ -18,26 +18,21 @@ pub trait SearchOption: Send + Sync {
     fn matches(&self, line: &str, query: &str) -> bool;
 }
 
-/// Struct representing a case-insensitive search option.
 pub struct CaseInsensitive;
 
-/// Struct representing a case-sensitive search option.
 pub struct CaseSensitive;
 
-/// The expression is searched for as a word
 pub struct WordRegExp {
-    pub case_insensitive: bool
+    pub case_insensitive: bool,
 }
 
 /// Struct representing an inverted search option.
 pub struct InvertMatch<T: SearchOption> {
-    /// The inner search option to invert.
     pub inner: T,
 }
 
 /// Struct representing a search configuration.
 pub struct SearchConfig {
-    /// The list of search options in the configuration.
     pub configs: Vec<Box<dyn SearchOption>>,
 }
 
@@ -49,6 +44,7 @@ impl SearchOption for WordRegExp {
             format!(r"\b{}\b", regex::escape(query))
         };
         let re = Regex::new(&pattern).unwrap();
+
         re.is_match(line)
     }
 }
@@ -77,7 +73,6 @@ impl<T: SearchOption> SearchOption for InvertMatch<T> {
 }
 
 impl SearchConfig {
-    /// Creates a new empty search configuration.
     pub fn new() -> Self {
         Self { configs: vec![] }
     }

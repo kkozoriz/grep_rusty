@@ -136,7 +136,9 @@ pub fn run(args: &Args) -> Result<Vec<String>, Box<dyn Error>> {
     }
 
     if args.word_regexp {
-        config.add_config(Box::new(WordRegExp {case_insensitive: args.ignore_case}))
+        config.add_config(Box::new(WordRegExp {
+            case_insensitive: args.ignore_case,
+        }))
     }
 
     if args.invert_match {
