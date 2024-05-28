@@ -4,6 +4,7 @@ authors = ["Konstantin Kozoriz <kkozoriz7@yandex.ru>"]
 description = "grep_rusty is a reimplementation of the classic grep utility in Rust."
 version = "0.1.0"
 edition = "2021"
+readme = "README.md"
 
 [profile.release]
 opt-level = 3

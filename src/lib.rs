@@ -46,10 +46,12 @@ use clap::Parser;
 use rayon::prelude::*;
 pub use search::*;
 
+use colored::Colorize;
 use std::error::Error;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::process;
 
 #[derive(Parser, Debug)]
 #[command(name = "grep-rusty")]
@@ -115,39 +117,78 @@ where
         .collect())
 }
 
-/// Runs the grep_rusty utility
-///
-/// # Arguments
-///
-/// * `args` - The command line arguments
-///
-/// # Returns
-///
-/// * `Result<(), Box<dyn Error>>` - A result indicating success or an error
-pub fn run(args: &Args) -> Result<Vec<String>, Box<dyn Error>> {
-    let reader_result = read_lines(&args.file_path)?;
+pub struct GrepRusty {
+    search_config: SearchConfig,
+    result: Result<Vec<String>, Box<dyn Error>>,
+}
 
-    let mut config = SearchConfig::default();
+impl GrepRusty {
+    pub fn new() -> GrepRusty {
+        GrepRusty {
+            search_config: Default::default(),
+            result: Ok(vec![]),
+        }
+    }
+    pub fn set_config(mut self, args: &Args) -> GrepRusty {
+        let mut config = SearchConfig::default();
 
-    if args.ignore_case {
-        config.add_config(Box::new(CaseInsensitive))
-    } else {
-        config.add_config(Box::new(CaseSensitive))
+        if args.ignore_case {
+            config.add_config(Box::new(CaseInsensitive))
+        } else {
+            config.add_config(Box::new(CaseSensitive))
+        }
+
+        if args.word_regexp {
+            config.add_config(Box::new(WordRegExp {
+                case_insensitive: args.ignore_case,
+            }))
+        }
+
+        if args.invert_match {
+            config = SearchConfig {
+                configs: vec![Box::new(InvertMatch { inner: config })],
+            };
+        }
+
+        self.search_config = config;
+
+        self
     }
 
-    if args.word_regexp {
-        config.add_config(Box::new(WordRegExp {
-            case_insensitive: args.ignore_case,
-        }))
+    pub fn run(mut self, pattern: &str, file_path: &PathBuf) -> GrepRusty {
+        match read_lines(file_path) {
+            Ok(reader) => {
+                self.result = search_query(reader, pattern, &self.search_config);
+                self
+            }
+            Err(e) => {
+                eprintln!("Application error {e}");
+                process::exit(1);
+            }
+        }
     }
 
-    if args.invert_match {
-        config = SearchConfig {
-            configs: vec![Box::new(InvertMatch { inner: config })],
-        };
-    }
+    pub fn print_result(self, pattern: &str, file_path: &Path) {
+        if let Ok(result) = self.result {
+            if result.is_empty() {
+                println!(
+                    "Query {} not found in file {}",
+                    pattern.red(),
+                    file_path.display().to_string().purple()
+                );
+            } else {
+                println!("Found {} lines\nResult of search:", result.len());
 
-    search_query(reader_result, &args.pattern, &config)
+                result.iter().for_each(|line| println!("{line}"))
+            }
+        }
+    }
+}
+
+impl Default for GrepRusty {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(test)]
